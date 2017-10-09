@@ -89,13 +89,6 @@ bool EventPipeEvent::NeedStack() const
     return m_needStack;
 }
 
-bool EventPipeEvent::IsEnabled() const
-{
-    LIMITED_METHOD_CONTRACT;
-
-    return m_enabled;
-}
-
 BYTE *EventPipeEvent::GetMetadata() const
 {
     LIMITED_METHOD_CONTRACT;

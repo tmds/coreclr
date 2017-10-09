@@ -73,7 +73,7 @@ private:
     bool NeedStack() const;
 
     // True if the event is currently enabled.
-    bool IsEnabled() const;
+    bool IsEnabled() const { return m_enabled; }
 
     // Get metadata
     BYTE *GetMetadata() const;

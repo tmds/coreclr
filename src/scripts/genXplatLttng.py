@@ -407,8 +407,6 @@ def generateLttngTpProvider(providerName, eventNodes, allTemplates):
     for eventNode in eventNodes:
         eventName    = eventNode.getAttribute('symbol')
         templateName = eventNode.getAttribute('template')
-        #generate EventXplatEnabled
-        lTTngImpl.append("extern \"C\" BOOL  EventXplatEnabled%s(){ return tracepoint_enabled(%s, %s); }\n\n" % (eventName, providerName, eventName))
         #generate FireEtw functions
         fnptype = []
         linefnptype = []

@@ -284,8 +284,7 @@ def generateClrallEvents(eventNodes,allTemplates):
         clrallEvents.append(eventName)
         clrallEvents.append("() {return ")
         clrallEvents.append("EventPipeEventEnabled" + eventName + "() || ")
-        clrallEvents.append("(XplatEventLogger::IsEventLoggingEnabled() && EventXplatEnabled")
-        clrallEvents.append(eventName+"());}\n\n")
+        clrallEvents.append("EventXplatEnabled" + eventName +"();}\n\n")
         #generate FireEtw functions
         fnptype     = []
         fnbody      = []
@@ -338,18 +337,23 @@ def generateClrallEvents(eventNodes,allTemplates):
         fnptype.extend(fnptypeline)
         fnptype.append("\n)\n{\n")
         fnbody.append(lindent)
-        fnbody.append("ULONG status = EventPipeWriteEvent" + eventName + "(" + ''.join(line) + ");\n")
+        fnbody.append("ULONG status = ERROR_SUCCESS;\n")
         fnbody.append(lindent)
-        fnbody.append("if(XplatEventLogger::IsEventLoggingEnabled())\n")
+        fnbody.append("if(EventPipeEventEnabled" + eventName + "())\n")
         fnbody.append(lindent)
         fnbody.append("{\n")
         fnbody.append(lindent)
         fnbody.append(lindent)
-        fnbody.append("status &= FireEtXplat")
-        fnbody.append(eventName)
-        fnbody.append("(")
-        fnbody.extend(line)
-        fnbody.append(");\n")
+        fnbody.append("status &= EventPipeWriteEvent" + eventName + "(" + ''.join(line) + ");\n")
+        fnbody.append(lindent)
+        fnbody.append("}\n")
+        fnbody.append(lindent)
+        fnbody.append("if(EventXplatEnabled" + eventName + "())\n")
+        fnbody.append(lindent)
+        fnbody.append("{\n")
+        fnbody.append(lindent)
+        fnbody.append(lindent)
+        fnbody.append("status &= FireEtXplat" + eventName + "(" + ''.join(line) + ");\n")
         fnbody.append(lindent)
         fnbody.append("}\n")
         fnbody.append(lindent)
@@ -361,16 +365,14 @@ def generateClrallEvents(eventNodes,allTemplates):
 
     return ''.join(clrallEvents)
 
-def generateClrXplatEvents(eventNodes, allTemplates):
+def generateClrXplatEvents(providerName, eventNodes, allTemplates):
     clrallEvents = []
     for eventNode in eventNodes:
         eventName    = eventNode.getAttribute('symbol')
         templateName = eventNode.getAttribute('template')
 
-        #generate EventEnabled
-        clrallEvents.append("extern \"C\" BOOL EventXplatEnabled")
-        clrallEvents.append(eventName)
-        clrallEvents.append("();\n")
+        #generate EventXplatEnabled
+        clrallEvents.append("extern \"C\" inline BOOL  EventXplatEnabled%s(){ return XplatEventLogger::IsEventLoggingEnabled() && tracepoint_enabled(%s, %s); }\n" % (eventName, providerName, eventName))
         #generate FireEtw functions
         fnptype     = []
         fnptypeline = []
@@ -421,9 +423,8 @@ def generateClrEventPipeWriteEvents(eventNodes, allTemplates):
         writeevent   = []
         fnptypeline  = []
 
-        eventenabled.append("extern \"C\" bool EventPipeEventEnabled")
-        eventenabled.append(eventName)
-        eventenabled.append("();\n")
+        eventenabled.append("extern \"C\" EventPipeEvent *EventPipeEvent%s;\n" % (eventName))
+        eventenabled.append("extern \"C\" inline bool  EventPipeEventEnabled%s(){ return EventPipeEvent%s->IsEnabled(); }\n" % (eventName, eventName))
 
         writeevent.append("extern \"C\" ULONG EventPipeWriteEvent")
         writeevent.append(eventName)
@@ -721,6 +722,7 @@ def generatePlformIndependentFiles(sClrEtwAllMan,incDir,etmDummyFile):
 
     generateEtmDummyHeader(sClrEtwAllMan,etmDummyFile)
     tree           = DOM.parse(sClrEtwAllMan)
+    coreclrRoot = """%s/../../../../""" % (os.getcwd())
 
     if not incDir:
         return
@@ -740,6 +742,7 @@ def generatePlformIndependentFiles(sClrEtwAllMan,incDir,etmDummyFile):
     Clrallevents.write(stdprolog + "\n")
     Clrxplatevents.write(stdprolog + "\n")
     Clreventpipewriteevents.write(stdprolog + "\n")
+    Clreventpipewriteevents.write("""#include \"%s/src/vm/eventpipeevent.h\"\n""" % (coreclrRoot))
 
     Clrallevents.write("\n#include \"clrxplatevents.h\"\n")
     Clrallevents.write("#include \"clreventpipewriteevents.h\"\n\n")
@@ -752,7 +755,13 @@ def generatePlformIndependentFiles(sClrEtwAllMan,incDir,etmDummyFile):
         Clrallevents.write(generateClrallEvents(eventNodes, allTemplates) + "\n")
 
         #pal: create clrallevents.h
-        Clrxplatevents.write(generateClrXplatEvents(eventNodes, allTemplates) + "\n")
+        providerName = providerNode.getAttribute('name')
+        providerName = providerName.replace("Windows-",'')
+        providerName = providerName.replace("Microsoft-",'')
+
+        providerName      = providerName.replace('-','_')
+
+        Clrxplatevents.write(generateClrXplatEvents(providerName, eventNodes, allTemplates) + "\n")
 
         #eventpipe: create clreventpipewriteevents.h
         Clreventpipewriteevents.write(generateClrEventPipeWriteEvents(eventNodes, allTemplates) + "\n")

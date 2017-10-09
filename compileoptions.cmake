@@ -21,7 +21,7 @@ if (CLR_CMAKE_PLATFORM_UNIX)
   add_definitions(-DDISABLE_CONTRACTS)
   # The -ferror-limit is helpful during the porting, it makes sure the compiler doesn't stop
   # after hitting just about 20 errors.
-  add_compile_options(-ferror-limit=4096)
+  # add_compile_options(-ferror-limit=4096)
 
   if (CLR_CMAKE_WARNINGS_ARE_ERRORS)
     # All warnings that are not explicitly disabled are reported as errors

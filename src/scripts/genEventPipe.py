@@ -46,15 +46,6 @@ def generateClrEventPipeWriteEventsImpl(
         eventName = eventNode.getAttribute('symbol')
         templateName = eventNode.getAttribute('template')
 
-        # generate EventPipeEventEnabled function
-        eventEnabledImpl = """bool EventPipeEventEnabled%s()
-{
-    return EventPipeEvent%s->IsEnabled();
-}
-
-""" % (eventName, eventName)
-        WriteEventImpl.append(eventEnabledImpl)
-
         # generate EventPipeWriteEvent function
         fnptype = []
         linefnptype = []
